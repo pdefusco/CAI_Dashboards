@@ -91,4 +91,4 @@ def update_outputs(threshold):
 # 5. Run app
 # ----------------------------
 if __name__ == "__main__":
-    app.run_server(debug=True, host="127.0.0.1", port=int(os.environ["CDSW_APP_PORT"]))
+    app.run(debug=True, host="127.0.0.1", port=int(os.environ["CDSW_APP_PORT"]))
