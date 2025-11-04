@@ -42,20 +42,23 @@ import os
 import cml.metrics_v1 as metrics
 import cml.models_v1 as models
 from xgboost import XGBClassifier
+import xgboost as xgb
+import pandas as pd
+import joblib
 
 # For JSON or text format
-loaded_model = xgb.Booster()
-loaded_model.load_model("my_xgboost_model.json") # or "my_xgboost_model.txt"
+loaded_model = joblib.load("my_xgboost_model.joblib")
 
 @models.cml_model(metrics=True)
 # This is the main function used for serving the model. It will take in the JSON formatted arguments.
-def explain(args):
+def predict(data):
 
     df = pd.DataFrame(data, index=[0])
 
     df['age'] = df['age'].astype(float)
     df['credit_card_balance'] = df['credit_card_balance'].astype(float)
     df['bank_account_balance'] = df['bank_account_balance'].astype(float)
+    df['mortgage_balance'] = df['mortgage_balance'].astype(float)
     df['sec_bank_account_balance'] = df['sec_bank_account_balance'].astype(float)
     df['savings_account_balance'] = df['savings_account_balance'].astype(float)
     df['sec_savings_account_balance'] = df['sec_savings_account_balance'].astype(float)
@@ -66,20 +69,45 @@ def explain(args):
     df['longitude'] = df['longitude'].astype(float)
     df['latitude'] = df['latitude'].astype(float)
     df['transaction_amount'] = df['transaction_amount'].astype(float)
-    df['fraud_trx'] = df['fraud_trx'].astype(float)
+    df['customer_score'] = df['customer_score'].astype(float)
 
-    df.columns = ['age', 'credit_card_balance', 'bank_account_balance', 'sec_bank_account_balance', 'savings_account_balance', 'sec_savings_account_balance', 'total_est_nworth', 'primary_loan_balance', 'secondary_loan_balance', 'uni_loan_balance', 'longitude', 'latitude', 'transaction_amount', 'fraud_trx']
+    df.columns = ['age', 'credit_card_balance', 'bank_account_balance', 'mortgage_balance', 'sec_bank_account_balance', 'savings_account_balance', 'sec_savings_account_balance', \
+                  'total_est_nworth', 'primary_loan_balance', 'secondary_loan_balance', 'uni_loan_balance', 'longitude', 'latitude', 'transaction_amount', \
+                 'customer_score']
 
-    y_pred = loaded_model.predict(data)[0]
-    probability = loaded_model.predict_proba(data)[0]
+    y_pred = loaded_model.predict(df)[0]
+    probability = loaded_model.predict_proba(df)[0]
 
     # Track inputs
     metrics.track_metric("input_data", data)
 
     # Track our prediction
-    metrics.track_metric("probability", probability)
+    metrics.track_metric("probability", float(probability[0]))
 
     # Track explanation
-    metrics.track_metric("y_pred", y_pred)
+    metrics.track_metric("y_pred", float(y_pred))
 
-    return {"data": dict(data), "probability": probability, "y_pred": y_pred}
+    return {"data": data, "probability": probability, "y_pred": y_pred}
+
+
+'''
+data = {
+  "age": "6",
+  "credit_card_balance": "3",
+  "bank_account_balance": "1",
+  "sec_bank_account_balance": "1",
+  "savings_account_balance": "1",
+  "sec_savings_account_balance": "2",
+  "total_est_nworth": "3",
+  "primary_loan_balance": "6",
+  "secondary_loan_balance": "8",
+  "uni_loan_balance": "1",
+  "longitude": "1",
+  "latitude": "1",
+  "transaction_amount": "2",
+  "customer_score": "1",
+  "mortgage_balance": "2"
+}
+
+predict(data)
+'''

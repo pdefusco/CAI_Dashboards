@@ -46,6 +46,8 @@ from xgboost import XGBClassifier
 from datetime import date
 import cml.data_v1 as cmldata
 import pyspark.pandas as ps
+import joblib
+
 
 USERNAME = os.environ["PROJECT_OWNER"]
 DBNAME = os.environ["DBNAME_PREFIX"]+"_"+USERNAME
@@ -70,4 +72,5 @@ model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
 y_pred = model.predict(X_test)
 probabilities = model.predict_proba(X_test)
 
-model.save_model("my_xgboost_model.json")
+#model.save_model("my_xgboost_model.json")
+joblib.dump(model, "my_xgboost_model.joblib")
