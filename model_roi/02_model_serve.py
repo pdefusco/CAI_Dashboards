@@ -50,9 +50,28 @@ loaded_model.load_model("my_xgboost_model.json") # or "my_xgboost_model.txt"
 @models.cml_model(metrics=True)
 # This is the main function used for serving the model. It will take in the JSON formatted arguments.
 def explain(args):
-    #data = em.cast_dct(data)
-    y_pred = loaded_model.predict(data)
-    probability = loaded_model.predict_proba(data)
+
+    df = pd.DataFrame(data, index=[0])
+
+    df['age'] = df['age'].astype(float)
+    df['credit_card_balance'] = df['credit_card_balance'].astype(float)
+    df['bank_account_balance'] = df['bank_account_balance'].astype(float)
+    df['sec_bank_account_balance'] = df['sec_bank_account_balance'].astype(float)
+    df['savings_account_balance'] = df['savings_account_balance'].astype(float)
+    df['sec_savings_account_balance'] = df['sec_savings_account_balance'].astype(float)
+    df['total_est_nworth'] = df['total_est_nworth'].astype(float)
+    df['primary_loan_balance'] = df['primary_loan_balance'].astype(float)
+    df['secondary_loan_balance'] = df['secondary_loan_balance'].astype(float)
+    df['uni_loan_balance'] = df['uni_loan_balance'].astype(float)
+    df['longitude'] = df['longitude'].astype(float)
+    df['latitude'] = df['latitude'].astype(float)
+    df['transaction_amount'] = df['transaction_amount'].astype(float)
+    df['fraud_trx'] = df['fraud_trx'].astype(float)
+
+    df.columns = ['age', 'credit_card_balance', 'bank_account_balance', 'sec_bank_account_balance', 'savings_account_balance', 'sec_savings_account_balance', 'total_est_nworth', 'primary_loan_balance', 'secondary_loan_balance', 'uni_loan_balance', 'longitude', 'latitude', 'transaction_amount', 'fraud_trx']
+
+    y_pred = loaded_model.predict(data)[0]
+    probability = loaded_model.predict_proba(data)[0]
 
     # Track inputs
     metrics.track_metric("input_data", data)
