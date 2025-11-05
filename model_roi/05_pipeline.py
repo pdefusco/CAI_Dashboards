@@ -63,21 +63,6 @@ except ValueError:
 session_id = "".join([random.choice(string.ascii_lowercase) for _ in range(6)])
 session_id
 
-# cursor also supports search_filter
-# cursor = Cursor(client.list_runtimes,
-#                 search_filter = json.dumps({"image_identifier":"jupyter"}))
-cursor = Cursor(client.list_runtimes)
-runtimes = cursor.items()
-for rt in runtimes:
-    print(rt.image_identifier)
-
-try:
-    # List the available runtime addons, optionally filtered, sorted, and paginated.
-    api_response = client.list_runtime_addons(page_size=500)
-    pprint(api_response)
-except ApiException as e:
-    print("Exception when calling CMLServiceApi->list_runtime_addons: %s\n" % e)
-
 cluster = os.getenv("CDSW_DOMAIN")
 
 # Set correlation factor
@@ -164,10 +149,6 @@ modelBuildId = createModelBuildResponse.id
 
 deployment.createModelDeployment(modelBuildId, projectId, modelCreationId)
 
-
-model_id = 'model_id_example' # str | ID of the model to get deployments for.
-build_id = 'build_id_example' # str | ID of the model build to get deployments for.
-
 try:
     # List model deployments, optionally filtered, sorted, and paginated.
     api_response = api_instance.list_model_deployments(project_id, modelCreationId, modelBuildId)
@@ -193,12 +174,39 @@ simulation_job_body = cmlapi.CreateJobRequest(
 )
 simulation_job = client.create_job(simulation_job_body, project_id)
 
-# Run the SPARKGEN Jobs
-jobrun_body = cmlapi.CreateJobRunRequest(project_id, simulation_job.id)
-job_run = client.create_job_run(jobrun_body, project_id, simulation_job.id)
+# Run the Simulation Jobs
+simulation_jobrun_body = cmlapi.CreateJobRunRequest(project_id, simulation_job.id)
+simulation_job_run = client.create_job_run(simulation_jobrun_body, project_id, simulation_job.id)
 
-# Rmove Jobs
-print("PIPELINE DELETED\n")
-client.delete_job(project_id = project_id, job_id = datagen_job.id)
-client.delete_job(project_id = project_id, job_id = train_model_job.id)
-client.delete_job(project_id = project_id, job_id = simulation_job.id)
+### Poll for Simulation Job Status
+try:
+    # Gets a job run.
+    api_response = api_instance.get_job_run(project_id, simulation_job.id, simulation_job_run.id)
+    pprint(api_response)
+except ApiException as e:
+    print("Exception when calling CMLServiceApi->get_job_run: %s\n" % e)
+
+if api_response.status == "complete":
+    continue
+else:
+    pass #just wait here
+
+### Create Application
+application_body = cmlapi.CreateApplicationRequest(
+    project_id = project_id,
+    name = "Live Model ROI Dashboard",
+    subdomain = "Org",
+    description = "Continuously Updating Model ROI Dashboard",
+    script = "model_roi/03_simulation.py",
+    cpu = 4.0,
+    memory = 8.0,
+    runtime_identifier = "docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5",
+    bypass_authentication = True
+    )
+
+try:
+    # Create an application and implicitly start it immediately.
+    api_response = api_instance.create_application(application_body, project_id)
+    pprint(api_response)
+except ApiException as e:
+    print("Exception when calling CMLServiceApi->create_application: %s\n" % e)
