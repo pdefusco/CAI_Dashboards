@@ -87,10 +87,10 @@ def predict(data):
     # Track explanation
     metrics.track_metric("y_pred", float(y_pred))
 
-    return {"data": data, "probability": probability, "y_pred": y_pred}
+    return {"data": data, "probability": float(probability[0]), "y_pred": float(y_pred)}
 
 
-'''
+"""
 data = {
   "age": "6",
   "credit_card_balance": "3",
@@ -110,4 +110,4 @@ data = {
 }
 
 predict(data)
-'''
+"""

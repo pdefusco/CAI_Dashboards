@@ -46,25 +46,22 @@ except ImportError:
 import time, os
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix
-from cmlbootstrap import CMLBootstrap
-import cmlapi
-from src.api import ApiUtility
-from pandas import json_normalize
-
-import numpy as np
-import pandas as pd
+from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_classification
 from xgboost import XGBClassifier
+from cmlbootstrap import CMLBootstrap
+from src.api import ApiUtility
+from pandas import json_normalize
+import numpy as np
+import pandas as pd
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output
-import plotly.express as px
 import cml.data_v1 as cmldata
-import pyspark.pandas as ps
-
 from dash import dcc, html, Input, Output
 import plotly.express as px
-from sklearn.model_selection import train_test_split
+import cmlapi
+
 
 # SET USER VARIABLES
 USERNAME = os.environ["PROJECT_OWNER"]
@@ -73,7 +70,7 @@ USERNAME = os.environ["PROJECT_OWNER"]
 client = cmlapi.default_client()
 
 username = os.environ["PROJECT_OWNER"]
-modelName = "FraudCLF-" + username
+modelName = "Model-CLF"
 
 project_id = os.environ["CDSW_PROJECT_ID"]
 client.list_models(project_id)
@@ -97,7 +94,11 @@ model_metrics = cdsw.read_metrics(
 
 # This is a handy way to unravel the dict into a big pandas dataframe
 metrics_df = json_normalize(model_metrics["metrics"])
-metrics_df.tail().T
+metrics_df = metrics_df.dropna()
+
+y_test = metrics_df['metrics.final_label']
+y_pred = metrics_df['metrics.y_pred']
+y_proba = metrics_df['metrics.probability']
 
 #y_proba = model.predict_proba(X_test)[:, 1]
 

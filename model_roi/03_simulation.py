@@ -75,6 +75,10 @@ spark = dg.createSparkConnection()
 sparkDf = dg.dataGen(spark)
 
 df = sparkDf.toPandas()
+df = df.drop('fraud_trx', axis=1)
+df = df.astype(str)
+df = df.sample(n=1000)
+
 
 # You can access all models with API V2
 client = cmlapi.default_client()
@@ -84,25 +88,10 @@ client.list_models(project_id)
 # You can use an APIV2-based utility to access the latest model's metadata. For more, explore the src folder
 apiUtil = ApiUtility()
 
-modelName = "CLF-" + USERNAME
+modelName = "Model-CLF"
 
 Model_AccessKey = apiUtil.get_latest_deployment_details(model_name=modelName)["model_access_key"]
 Deployment_CRN = apiUtil.get_latest_deployment_details(model_name=modelName)["latest_deployment_crn"]
-
-#{"dataframe_split": {"columns": ["age", "credit_card_balance", "bank_account_balance", "mortgage_balance", "sec_bank_account_balance", "savings_account_balance", "sec_savings_account_balance", "total_est_nworth", "primary_loan_balance", "secondary_loan_balance", "uni_loan_balance", "longitude", "latitude", "transaction_amount"], "data":[[35.5, 20000.5, 3900.5, 14000.5, 2944.5, 3400.5, 12000.5, 29000.5, 1300.5, 15000.5, 10000.5, 2000.5, 90.5, 120.5]]}}
-
-def submitRequest(Model_AccessKey):
-    """
-    Method to create and send a synthetic request to Time Series Query Model
-    """
-
-    record = '{"dataframe_split": {"columns": ["age", "credit_card_balance", "bank_account_balance", "mortgage_balance", "sec_bank_account_balance", "savings_account_balance", "sec_savings_account_balance", "total_est_nworth", "primary_loan_balance", "secondary_loan_balance", "uni_loan_balance", "longitude", "latitude", "transaction_amount", "customer_score"]}}'
-    randomInts = [[random.uniform(1.01,500.01) for i in range(15)]]
-    data = json.loads(record)
-    data["dataframe_split"]["data"] = randomInts
-    response = cdsw.call_model(Model_AccessKey, data)
-
-    return response
 
 response_labels_sample = []
 percent_counter = 0
@@ -116,21 +105,27 @@ def bnkFraud(percent):
     else:
         return 0
 
-for i in range(1000):
-  print("Added {} records".format(percent_counter)) if (
-      percent_counter % 25 == 0
-  ) else None
-  percent_counter += 1
-  response = submitRequest(Model_AccessKey)
-  response_labels_sample.append(
-        {
-            "uuid": response["response"]["uuid"],
-            "response_label": response["response"]["prediction"],
-            "final_label": bnkFraud(percent_counter / percent_max),
-            "timestamp_ms": int(round(time.time() * 1000)),
-        }
-    )
+for record in json.loads(df.to_json(orient="records")):
+    print("Added {} records".format(percent_counter)) if (
+        percent_counter % 50 == 0
+    ) else None
+    percent_counter += 1
+    #print("\nSending Model Request:")
+    #print(record)
 
+    # **note** this is an easy way to interact with a model in a script
+    response = cdsw.call_model(Model_AccessKey, record)
+    #print("\nResponse:")
+    #print(response)
+    response_labels_sample.append(
+          {
+              "uuid": response["response"]["uuid"],
+              "response_label": response["response"]["prediction"]["y_pred"],
+              "response_probability": response["response"]["prediction"]["probability"],
+              "final_label": bnkFraud(percent_counter / percent_max),
+              "timestamp_ms": int(round(time.time() * 1000)),
+          }
+    )
 
 # The "ground truth" loop adds the updated actual label value and an accuracy measure
 # every 100 calls to the model.
@@ -142,7 +137,7 @@ for index, vals in enumerate(response_labels_sample):
         final_labels = []
         response_labels = []
     final_labels.append(vals["final_label"])
-    response_labels.append(vals["response_label"][0])
+    response_labels.append(vals["response_label"])
     if index % 100 == 99:
         print("Adding accuracy metric")
         end_timestamp_ms = vals["timestamp_ms"]

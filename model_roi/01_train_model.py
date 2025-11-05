@@ -71,6 +71,4 @@ model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
 
 y_pred = model.predict(X_test)
 probabilities = model.predict_proba(X_test)
-
-#model.save_model("my_xgboost_model.json")
 joblib.dump(model, "my_xgboost_model.joblib")
