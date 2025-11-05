@@ -94,7 +94,7 @@ model_metrics = cdsw.read_metrics(
 
 # This is a handy way to unravel the dict into a big pandas dataframe
 metrics_df = json_normalize(model_metrics["metrics"])
-metrics_df = metrics_df.dropna()
+metrics_df = metrics_df.dropna(subset=['metrics.final_label', 'metrics.y_pred', 'metrics.probability'])
 
 y_test = metrics_df['metrics.final_label']
 y_pred = metrics_df['metrics.y_pred']
