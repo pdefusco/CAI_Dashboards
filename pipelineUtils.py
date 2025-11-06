@@ -51,7 +51,7 @@ class PipelineUtil:
         self.username = username
         self.client = cmlapi.default_client()
 
-    def poll_job_status(job_id, job_run_id, poll_interval=10, timeout=600):
+    def poll_job_status(self, job_id, job_run_id, poll_interval=10, timeout=600):
         """
         Polls a CML job run until it completes, fails, or times out.
 
@@ -99,28 +99,27 @@ class PipelineUtil:
 
 
     def create_and_run_job(
-        x=None,
+        self,
         script_path: str,
         job_name_prefix: str = "datagen_",
-        cpu: float,
-        memory: float,
+        cpu: float = 4.0,
+        memory: float = 8.0,
+        x=None,
         runtime_identifier: str = "docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5",
         runtime_addon_identifiers: list = None
     ):
         """
         Creates and runs a data generation job in Cloudera Machine Learning (CML).
 
+        If the job already exists, it will be skipped gracefully.
+
         Parameters
         ----------
-        client : object
-            The initialized CML API client.
+        self : object
+            The utility class instance containing `self.client` and `self.project_id`.
         cmlapi : module
             The CML API Python module (typically imported as `import cmlapi`).
-        project_id : str
-            The CML project ID where the job will be created.
-        x : any, optional
-            Optional environment variable 'x'. If not provided, it's omitted.
-        script_path : str, optional
+        script_path : str
             Path to the Python script to execute in the job.
         job_name_prefix : str, optional
             Prefix for the generated job name.
@@ -128,6 +127,8 @@ class PipelineUtil:
             Number of CPUs to allocate for the job.
         memory : float, optional
             Amount of memory (in GB) to allocate for the job.
+        x : any, optional
+            Optional environment variable 'x'. If not provided, it's omitted.
         runtime_identifier : str, optional
             The CML runtime identifier to use.
         runtime_addon_identifiers : list, optional
@@ -136,7 +137,7 @@ class PipelineUtil:
         Returns
         -------
         dict
-            A dictionary containing the created job and job run objects.
+            A dictionary containing the created job and job run objects, or None if skipped.
         """
         if runtime_addon_identifiers is None:
             runtime_addon_identifiers = ["spark351-24.1-h1"]
@@ -145,10 +146,12 @@ class PipelineUtil:
         if x is not None:
             environment["x"] = str(x)
 
-        # Create the DATAGEN Job
+        job_name = f"{job_name_prefix}"
+
+        # Create the job request body
         datagen_job_body = cmlapi.CreateJobRequest(
             project_id=self.project_id,
-            name=f"{job_name_prefix}",
+            name=job_name,
             script=script_path,
             cpu=cpu,
             memory=memory,
@@ -157,18 +160,40 @@ class PipelineUtil:
             environment=environment if environment else None
         )
 
-        datagen_job = self.client.create_job(datagen_job_body, self.project_id)
+        try:
+            print(f"Creating job '{job_name}' in project {self.project_id}...")
+            datagen_job = self.client.create_job(datagen_job_body, self.project_id)
+            pprint(datagen_job)
+            print("Job created successfully.")
+        except ApiException as e:
+            error_message = str(e).lower()
+            if "already exists" in error_message or "409" in error_message:
+                print(f"Job '{job_name}' already exists — skipping creation.")
+                # Optionally, retrieve the existing job (if needed)
+                return None
+            else:
+                print(f"Exception when calling create_job: {e}")
+                return None
 
-        # Run the DATAGEN Job
-        datagen_jobrun_body = cmlapi.CreateJobRunRequest(self.project_id, datagen_job.id)
-        datagen_job_run = client.create_job_run(datagen_jobrun_body, self.project_id, datagen_job.id)
+        # Run the job only if creation was successful
+        try:
+            print(f"▶️ Running job '{job_name}'...")
+            datagen_jobrun_body = cmlapi.CreateJobRunRequest(self.project_id, datagen_job.id)
+            datagen_job_run = self.client.create_job_run(datagen_jobrun_body, self.project_id, datagen_job.id)
+            print("Job run started successfully.")
 
-        return {
-            "job": datagen_job,
-            "job_run": datagen_job_run
-        }
+            return {
+                "job": datagen_job,
+                "job_run": datagen_job_run
+            }
+
+        except ApiException as e:
+            print(f"Exception when calling create_job_run: {e}")
+            return None
+
 
     def wait_for_model_build_complete(
+        self,
         model_creation_id: str,
         model_build_id: str,
         poll_interval: int = 10,
@@ -229,6 +254,7 @@ class PipelineUtil:
 
 
         def wait_for_model_deployment_status(
+            self,
             model_id: str,
             build_id: str,
             desired_status: str = "deployed",
@@ -323,6 +349,7 @@ class PipelineUtil:
 
 
     def create_cml_application(
+        self,
         name: str,
         subdomain: str,
         script: str,

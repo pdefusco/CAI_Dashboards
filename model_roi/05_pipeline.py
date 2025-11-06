@@ -68,7 +68,7 @@ pipelineUtil = PipelineUtil(project_id)
 datagen_job, datagen_job_run = pipelineUtil.create_and_run_job(
     x=x,
     script_path="model_roi/00_datagen.py",
-    job_name_prefix="datagen_",
+    job_name_prefix="datagen",
     cpu=2.0,
     memory=4.0,
     runtime_identifier="docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5",
@@ -84,7 +84,7 @@ pipelineUtil.poll_job_status(
 train_job, train_job_run = pipelineUtil.create_and_run_job(
     x=None,
     script_path="model_roi/01_train_model.py",
-    job_name_prefix="train_",
+    job_name_prefix="train",
     cpu=2.0,
     memory=4.0,
     runtime_identifier="docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5",
@@ -130,7 +130,7 @@ pipelineUtil.wait_for_model_deployment_status(
 simulation_job, simualtion_run = pipelineUtil.create_and_run_job(
     x=None,
     script_path="model_roi/03_simulation.py",
-    job_name_prefix="simulation_",
+    job_name_prefix="simulation",
     cpu=2.0,
     memory=4.0,
     runtime_identifier="docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5",
@@ -144,3 +144,12 @@ pipelineUtil.poll_job_status(
     timeout=600)
 
 ### Create Application
+
+api_instance = CMLServiceApi(client)
+
+app_response = create_cml_application(
+    name="Live Model ROI Dashboard",
+    subdomain="org",
+    description="Continuously Updating Model ROI Dashboard",
+    script="model_roi/06_live_model_roi_dashboard.py"
+)
