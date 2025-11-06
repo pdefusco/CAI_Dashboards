@@ -52,8 +52,8 @@ class ModelDeployment():
     Class to manage the model deployment of the xgboost model
     """
 
-    def __init__(self, client, projectId, username, experimentName, experimentId):
-        self.client = client
+    def __init__(self, projectId, username):
+        self.client = cmlapi.default_client()
         self.projectId = projectId
         self.username = username
 
@@ -73,7 +73,7 @@ class ModelDeployment():
 
         return api_response
 
-    def createModel(self, projectId, modelName, modelId, description = "Enterprise AI"):
+    def createModel(self, projectId, modelName, description = "Enterprise AI"):
         """
         Method to create a model
         """
@@ -106,7 +106,8 @@ class ModelDeployment():
                                     "comment": "invoking model build",
                                     "model_id": modelCreationId,
                                     "file_path": "model_roi/02_model_serve.py",
-                                    
+                                    "function_name": "predict",
+
                               }
 
         try:
