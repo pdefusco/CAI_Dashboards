@@ -12,7 +12,7 @@ Understanding ROI associated with each model deployment is a crucial aspect of A
 
 Just because a model is accurate it doesn't mean it is going to make decisions that lead to the highest revenue or to meeting business objectives. When building a production classifier you must have a close understanding of how many predictions result in True and False Negatives and Positives, so that you can associate each category with financial benefits and costs.  
 
-With Cloudera AI, you can monitor model performance via a dedicated backend Postgres database and build advanced model monitoring capabilities via the integrated SDK, resulting in optimized business decisions and ROI.
+With Cloudera AI, you can track every model request and ground truth via a dedicated backend Postgres database. And you can build advanced model monitoring capabilities via the integrated SDK, resulting in optimized business decisions and ROI.
 
 ## Understanding the Dashboard
 
@@ -131,6 +131,70 @@ Run the job. The job will run for approximately 30 minutes. When it is done, you
 #### 5. Explore the Dashboard
 
 Use the "Understanding the Dashboard" section above to simulate and compare different financial ROI scenarios.
+
+If you want to familiarize yourself with the Python SDK, open the scripts and notice the following highlights:
+
+##### 03_simulation.py
+
+Every Workbench has an integrated API. Models can be referenced by model metadata which can be obtained via the API ("cml apiV2").
+
+```
+client = cmlapi.default_client()
+```
+
+In this script a sample from the original data is taken in order to generate synthetic data requests. The SDK Call Model method is used in order to submit this sample as requests to the endpoint.
+
+```
+cdsw.call_model(Model_AccessKey, record)
+```
+
+##### 06_live_model_roi_dashboard.py
+
+The same API client can be used to generate dataframes with the tracked model endpoint requests and responses.
+
+```
+for model in range(len(listModelsResponse.models)):
+    modelName = listModelsResponse.models[model].name
+    Model_CRN = apiUtil.get_latest_deployment_details(model_name=modelName)["model_crn"]
+    Deployment_CRN = apiUtil.get_latest_deployment_details(model_name=modelName)["latest_deployment_crn"]
+
+    model_metrics = cdsw.read_metrics(model_crn=Model_CRN, model_deployment_crn=Deployment_CRN)
+
+    record = {
+        "model_name": modelName,
+        "model_crn": Model_CRN,
+        "deployment_crn": Deployment_CRN
+    }
+    if isinstance(model_metrics, dict):
+        record.update(model_metrics)
+    all_models_data.append(record)
+
+df = pd.json_normalize(all_models_data)
+```
+
+Users can arbitrarily define which metrics to track. In this example, the "final_label" field tracks ground truth ("what actually happened"); Predictions are tracked via the "y_pred" field; Finally, the "probability" field is used to also track the probability of the event belonging to the predicted class. This field will be later used in the same dashboard to model the decision threshold, thus moving records from one class to the other.
+
+```
+records = []
+for _, row in df.iterrows():
+    model_name = row.get("model_name")
+    model_crn = row.get("model_crn")
+    metrics_list = row.get("metrics", [])
+
+    if not isinstance(metrics_list, list):
+        continue
+
+    for request in metrics_list:
+        flat = {
+            "model_name": model_name,
+            "final_label": request.get("metrics", {}).get("final_label"),
+            "probability": request.get("metrics", {}).get("probability"),
+            "y_pred": request.get("metrics", {}).get("y_pred")
+        }
+        records.append(flat)
+
+metrics_flat_df = pd.DataFrame(records)
+```
 
 ## Summary & Next Steps
 
