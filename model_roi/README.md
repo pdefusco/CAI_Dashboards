@@ -1,6 +1,6 @@
 # Calculate Model ROI with Cloudera AI Model Metrics Store and Python SDK
 
-![alt text]()
+![alt text](../img/solution_arch.png)
 
 ## Objective
 
