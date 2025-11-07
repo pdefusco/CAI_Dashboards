@@ -78,7 +78,7 @@ class PipelineUtil:
                 status = api_response.status.lower()
                 print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Job run {job_run_id} status: {status}")
 
-                if status in ["complete", "failed", "cancelled"]:
+                if status in ["engine_succeeded"]:
                     print("Job finished with status:", status.upper())
                     pprint(api_response)
                     return api_response
@@ -179,13 +179,10 @@ class PipelineUtil:
         try:
             print(f"▶️ Running job '{job_name}'...")
             datagen_jobrun_body = cmlapi.CreateJobRunRequest(self.project_id, datagen_job.id)
-            datagen_job_run = self.client.create_job_run(datagen_jobrun_body, self.project_id, datagen_job.id)
+            datagen_job_run_response = self.client.create_job_run(datagen_jobrun_body, self.project_id, datagen_job.id)
             print("Job run started successfully.")
 
-            return {
-                "job": datagen_job,
-                "job_run": datagen_job_run
-            }
+            return datagen_job_run_response
 
         except ApiException as e:
             print(f"Exception when calling create_job_run: {e}")
@@ -196,6 +193,7 @@ class PipelineUtil:
         self,
         model_creation_id: str,
         model_build_id: str,
+        desired_status: str,
         poll_interval: int = 10,
         timeout: int = 1800
     ):
@@ -220,24 +218,25 @@ class PipelineUtil:
         Returns
         -------
         dict
-            The final API response once the build reaches 'complete', or None if it times out or fails.
+            The final API response once the build reaches 'built', or None if it times out or fails.
         """
         start_time = time.time()
 
-        print(f"Waiting for model build {model_build_id} to reach 'complete' state...")
+        print(f"Waiting for model build {model_build_id} to reach 'built' state...")
 
         while True:
             try:
                 # Query model deployment status
-                api_response = self.client.list_model_deployments(
-                    self.project_id, model_creation_id, model_build_id
+                api_response = self.client.list_model_builds(
+                    self.project_id, model_creation_id
                 )
-                pprint(api_response)
+
+                pprint(api_response.model_builds[0].status)
 
                 # If build is complete, break out
-                if getattr(api_response, "status", "").lower() == "complete":
-                    print("Model build has reached 'complete' state.")
-                    return api_response
+                if api_response.model_builds[0].status.lower() == desired_status.lower():
+                  print("Model build has reached 'built' state.")
+                  return api_response
 
                 # Check for timeout
                 elapsed = time.time() - start_time
@@ -253,99 +252,85 @@ class PipelineUtil:
                 time.sleep(poll_interval)
 
 
-        def wait_for_model_deployment_status(
-            self,
-            model_id: str,
-            build_id: str,
-            desired_status: str = "deployed",
-            poll_interval: int = 10,
-            timeout: int = 1800,
-            search_filter: str = None,
-            page_size: int = None,
-            page_token: str = None,
-            sort: str = None
-        ):
-            """
-            Polls for a model deployment to reach a desired status in Cloudera Machine Learning (CML).
+    def wait_for_model_deployment_status(
+        self,
+        model_id: str,
+        build_id: str,
+        desired_status: str = "deployed",
+        poll_interval: int = 10,
+        timeout: int = 1800,
+    ):
+        """
+        Polls for a model deployment to reach a desired status in Cloudera Machine Learning (CML).
 
-            Parameters
-            ----------
-            self.client : object
-                An instance of the initialized CML API service client (e.g., cmlapi.CMLServiceApi(client)).
-            project_id : str
-                The ID of the CML project containing the model.
-            model_id : str
-                The ID of the model to check deployment status for.
-            build_id : str
-                The ID of the model build associated with the deployment.
-            desired_status : str, optional
-                The deployment status to wait for (default is "deployed").
-            poll_interval : int, optional
-                Number of seconds to wait between polling attempts (default is 10 seconds).
-            timeout : int, optional
-                Maximum number of seconds to wait before giving up (default is 1800 seconds).
-            search_filter : str, optional
-                Optional filter string to narrow down deployments.
-            page_size : int, optional
-                Page size for the deployment list response.
-            page_token : str, optional
-                Page token for paginated responses.
-            sort : str, optional
-                Sort key for ordering results.
+        Parameters
+        ----------
+        self.client : object
+            An instance of the initialized CML API service client (e.g., cmlapi.CMLServiceApi(client)).
+        project_id : str
+            The ID of the CML project containing the model.
+        model_id : str
+            The ID of the model to check deployment status for.
+        build_id : str
+            The ID of the model build associated with the deployment.
+        desired_status : str, optional
+            The deployment status to wait for (default is "deployed").
+        poll_interval : int, optional
+            Number of seconds to wait between polling attempts (default is 10 seconds).
+        timeout : int, optional
+            Maximum number of seconds to wait before giving up (default is 1800 seconds).
+        search_filter : str, optional
+            Optional filter string to narrow down deployments.
+        page_size : int, optional
+            Page size for the deployment list response.
+        page_token : str, optional
+            Page token for paginated responses.
+        sort : str, optional
+            Sort key for ordering results.
 
-            Returns
-            -------
-            dict or None
-                The final API response when the deployment reaches the desired status,
-                or None if the operation times out.
-            """
-            start_time = time.time()
+        Returns
+        -------
+        dict or None
+            The final API response when the deployment reaches the desired status,
+            or None if the operation times out.
+        """
+        start_time = time.time()
 
-            print(f"Waiting for model deployment (build ID: {build_id}) to reach '{desired_status}' state...")
+        print(f"Waiting for model deployment (build ID: {build_id}) to reach '{desired_status}' state...")
 
-            while True:
-                try:
-                    # List model deployments (optionally with filters and pagination)
-                    api_response = self.client.list_model_deployments(
-                        self.project_id,
-                        model_id,
-                        build_id,
-                        search_filter=search_filter,
-                        page_size=page_size,
-                        page_token=page_token,
-                        sort=sort
-                    )
+        while True:
+            try:
+                # List model deployments (optionally with filters and pagination)
+                api_response = self.client.list_model_deployments(
+                    self.project_id,
+                    model_id,
+                    build_id
+                )
 
-                    pprint(api_response)
+                # Extract the deployment status
+                # (Handle both attribute-style and dict-style responses)
+                current_status = api_response.model_deployments[0].status
+                print(current_status)
 
-                    # Extract the deployment status
-                    # (Handle both attribute-style and dict-style responses)
-                    current_status = getattr(api_response, "status", None)
-                    if current_status is None and hasattr(api_response, "deployments"):
-                        # Try to read from deployments list if present
-                        deployments = getattr(api_response, "deployments", [])
-                        if deployments and hasattr(deployments[0], "status"):
-                            current_status = deployments[0].status
+                # Check if status matches desired state
+                if current_status and current_status.lower() == desired_status.lower():
+                    print(f"Model deployment has reached '{desired_status}' state.")
+                    return api_response
 
-                    # Check if status matches desired state
-                    if current_status and current_status.lower() == desired_status.lower():
-                        print(f"Model deployment has reached '{desired_status}' state.")
-                        return api_response
+                # Timeout check
+                if time.time() - start_time > timeout:
+                    print("Timed out waiting for model deployment to reach desired status.")
+                    return None
 
-                    # Timeout check
-                    if time.time() - start_time > timeout:
-                        print("Timed out waiting for model deployment to reach desired status.")
-                        return None
+                # Wait before polling again
+                time.sleep(poll_interval)
 
-                    # Wait before polling again
-                    time.sleep(poll_interval)
-
-                except ApiException as e:
-                    print(f"API Exception when calling CMLServiceApi->list_model_deployments: {e}")
-                    time.sleep(poll_interval)
-                except Exception as e:
-                    print(f"Unexpected error: {e}")
-                    time.sleep(poll_interval)
+            except ApiException as e:
+                print(f"API Exception when calling CMLServiceApi->list_model_deployments: {e}")
+                time.sleep(poll_interval)
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                time.sleep(poll_interval)
 
 
     def create_cml_application(

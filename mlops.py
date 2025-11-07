@@ -73,39 +73,62 @@ class ModelDeployment():
 
         return api_response
 
-    def createModel(self, projectId, modelName, description = "Enterprise AI"):
+    def createModel(self, projectId, modelName, description="Enterprise AI"):
         """
-        Method to create a model
-        """
+        Method to create a model in Cloudera Machine Learning (CML).
 
+        If a model with the same name already exists, creation is skipped gracefully.
+
+        Parameters
+        ----------
+        self : object
+            The utility class instance containing `self.client`.
+        projectId : str
+            The ID of the CML project in which to create the model.
+        modelName : str
+            The name of the model to create.
+        description : str, optional
+            A description of the model (default: "Enterprise AI").
+
+        Returns
+        -------
+        dict or None
+            The created model's API response, or None if creation was skipped.
+        """
         CreateModelRequest = {
-                                "project_id": projectId,
-                                "name" : modelName,
-                                "description": description,
-                                "disable_authentication": True
-                             }
+            "project_id": projectId,
+            "name": modelName,
+            "description": description,
+            "disable_authentication": True
+        }
 
         try:
-            # Create a model.
+            print(f"Creating model '{modelName}' in project {projectId}...")
             api_response = self.client.create_model(CreateModelRequest, projectId)
             pprint(api_response)
+            print("Model created successfully.")
+            return api_response
+
         except ApiException as e:
-            print("Exception when calling CMLServiceApi->create_model: %s\n" % e)
+            error_message = str(e).lower()
+            if "Project already has a model with that name" in error_message or "500" in error_message:
+                print(f"Model '{modelName}' already exists — skipping creation.")
+                return None
+            else:
+                print(f"Exception when calling create_model: {e}")
+                return None
 
-        return api_response
-
-    def createModelBuild(self, projectId, modelVersionId, modelCreationId, runtimeId):
+    def createModelBuild(self, projectId, modelCreationId, runtimeId, script_path):
         """
         Method to create a Model build
         """
 
         # Create Model Build
         CreateModelBuildRequest = {
-                                    "registered_model_version_id": modelVersionId,
                                     "runtime_identifier": runtimeId,
                                     "comment": "invoking model build",
                                     "model_id": modelCreationId,
-                                    "file_path": "model_roi/02_model_serve.py",
+                                    "file_path": script_path,
                                     "function_name": "predict",
 
                               }

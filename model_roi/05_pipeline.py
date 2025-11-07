@@ -37,8 +37,6 @@
 # #  Author(s): Paul de Fusco
 #***************************************************************************/
 
-import string
-import random
 from __future__ import print_function
 import cmlapi
 from cmlapi.rest import ApiException
@@ -50,12 +48,15 @@ from mlops import ModelDeployment
 from cmlapi.utils import Cursor
 from mlops import ModelDeployment
 from pipelineUtils import PipelineUtil
+import random
+import string
 
 # current date and time
 now = datetime.now()
 
 timestamp = datetime.timestamp(now)
 
+username = os.environ["PROJECT_OWNER"]
 cluster = os.getenv("CDSW_DOMAIN")
 project_id = os.environ["CDSW_PROJECT_ID"]
 
@@ -63,85 +64,109 @@ project_id = os.environ["CDSW_PROJECT_ID"]
 x = random.randint(1, 5)
 
 # Instantiate Pipeline Util
-pipelineUtil = PipelineUtil(project_id)
+pipelineUtil = PipelineUtil(project_id, username)
 
-datagen_job, datagen_job_run = pipelineUtil.create_and_run_job(
-    x=x,
-    script_path="model_roi/00_datagen.py",
-    job_name_prefix="datagen",
-    cpu=2.0,
-    memory=4.0,
-    runtime_identifier="docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5",
-    runtime_addon_identifiers=["spark351-24.1-h1"]
-)
+def random_suffix(length=5):
+    """Generate a random alphanumeric string of given length."""
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
-pipelineUtil.poll_job_status(
-    datagen_job.id,
-    datagen_job_run.id,
-    poll_interval=10,
-    timeout=600)
+for i in range(10):
+    print(f"\nRunning pipeline iteration {i+1}/10\n")
 
-train_job, train_job_run = pipelineUtil.create_and_run_job(
-    x=None,
-    script_path="model_roi/01_train_model.py",
-    job_name_prefix="train",
-    cpu=2.0,
-    memory=4.0,
-    runtime_identifier="docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5",
-    runtime_addon_identifiers=["spark351-24.1-h1"]
-)
+    # Create and run datagen job
+    datagen_job_run_response = pipelineUtil.create_and_run_job(
+        x=x,
+        script_path="model_roi/00_datagen.py",
+        job_name_prefix="datagen",
+        cpu=2.0,
+        memory=4.0,
+        runtime_identifier="docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5",
+        runtime_addon_identifiers=["spark351-24.1-h1"]
+    )
 
-pipelineUtil.poll_job_status(
-    train_job.id,
-    train_job_run.id,
-    poll_interval=10,
-    timeout=600)
+    pipelineUtil.poll_job_status(
+        datagen_job_run_response.job_id,
+        datagen_job_run_response.id,
+        poll_interval=10,
+        timeout=600
+    )
 
-# Create the MODEL DEPLOYMENT
-deploymentUtil = ModelDeployment(projectId, username)
-modelName = "CLF-endpoint"
+    # Create and run train job
+    train_job_run_response = pipelineUtil.create_and_run_job(
+        x=None,
+        script_path="model_roi/01_train_model.py",
+        job_name_prefix="train",
+        cpu=2.0,
+        memory=4.0,
+        runtime_identifier="docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5",
+        runtime_addon_identifiers=["spark351-24.1-h1"]
+    )
 
-createModelResponse = deployment.createModel(projectId, modelName)
-modelCreationId = createModelResponse.id
+    pipelineUtil.poll_job_status(
+        train_job_run_response.job_id,
+        train_job_run_response.id,
+        poll_interval=10,
+        timeout=600
+    )
 
-runtimeId = "docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5" #Modify as needed
-createModelBuildResponse = deployment.createModelBuild(projectId, modelVersionId, modelCreationId, runtimeId)
-modelBuildId = createModelBuildResponse.id
+    # Create unique model name
+    unique_model_name = f"CLF-endpoint-{random_suffix()}"
 
-# Wait for Model Build to Complete
-pipelineUtil.pipelineUtilwait_for_model_build_complete(
-    model_creation_id=modelCreationId,
-    model_build_id=modelBuildId,
-    poll_interval=15,   # optional
-    timeout=1800        # optional
-)
+    # Create the model
+    deployment = ModelDeployment(project_id, username)
+    createModelResponse = deployment.createModel(project_id, unique_model_name)
 
-createModelDeploymentResponse = deployment.createModelDeployment(modelBuildId, projectId, modelCreationId)
+    if createModelResponse is None:
+        print(f"Model '{unique_model_name}' already exists — skipping build/deployment.")
+        continue  # Skip this iteration if model already exists
 
-# Wait for Model Deployment to Complete
-pipelineUtil.wait_for_model_deployment_status(
-    model_id=modelCreationId,
-    build_id=modelBuildId,
-    desired_status="deployed",
-    poll_interval=15,
-    timeout=1800
-)
+    modelCreationId = createModelResponse.id
+    runtimeId = "docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5"
 
-simulation_job, simualtion_run = pipelineUtil.create_and_run_job(
-    x=None,
-    script_path="model_roi/03_simulation.py",
-    job_name_prefix="simulation",
-    cpu=2.0,
-    memory=4.0,
-    runtime_identifier="docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5",
-    runtime_addon_identifiers=["spark351-24.1-h1"]
-)
+    # Create model build
+    createModelBuildResponse = deployment.createModelBuild(project_id, modelCreationId, runtimeId, script_path="model_roi/02_model_serve.py")
+    modelBuildId = createModelBuildResponse.id
 
-pipelineUtil.poll_job_status(
-    simulation_job.id,
-    simulation_job_run.id,
-    poll_interval=10,
-    timeout=600)
+    # Wait for Model Build to Complete
+    pipelineUtil.wait_for_model_build_complete(
+        model_creation_id=modelCreationId,
+        model_build_id=modelBuildId,
+        desired_status="built",
+        poll_interval=15,
+        timeout=1800
+    )
+
+    # Create model deployment
+    createModelDeploymentResponse = deployment.createModelDeployment(modelBuildId, project_id, modelCreationId)
+
+    # Wait for Model Deployment to Complete
+    pipelineUtil.wait_for_model_deployment_status(
+        model_id=modelCreationId,
+        build_id=modelBuildId,
+        desired_status="deployed",
+        poll_interval=15,
+        timeout=1800
+    )
+
+    # Run simulation job
+    simulation_job_response = pipelineUtil.create_and_run_job(
+        x=unique_model_name,
+        script_path="model_roi/03_simulation.py",
+        job_name_prefix="simulation",
+        cpu=2.0,
+        memory=4.0,
+        runtime_identifier="docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5",
+        runtime_addon_identifiers=["spark351-24.1-h1"]
+    )
+
+    pipelineUtil.poll_job_status(
+        simulation_job_response.job_id,
+        simulation_job_response.id,
+        poll_interval=10,
+        timeout=600
+    )
+
+    print(f"\nIteration {i+1} completed.\n")
 
 ### Create Application
 
@@ -153,3 +178,52 @@ app_response = create_cml_application(
     description="Continuously Updating Model ROI Dashboard",
     script="model_roi/06_live_model_roi_dashboard.py"
 )
+
+
+
+
+# Create unique model name
+unique_model_name = f"CLF-endpoint-{random_suffix()}"
+
+# Create the model
+deployment = ModelDeployment(project_id, username)
+createModelResponse = deployment.createModel(project_id, unique_model_name)
+
+if createModelResponse is None:
+    print(f"Model '{unique_model_name}' already exists — skipping build/deployment.")
+
+modelCreationId = createModelResponse.id
+runtimeId = "docker.repository.cloudera.com/cloudera/cdsw/ml-runtime-pbj-workbench-python3.10-standard:2025.09.1-b5"
+desired_status='built'
+# Create model build
+createModelBuildResponse = deployment.createModelBuild(project_id, modelCreationId, runtimeId, script_path="model_roi/01_train_model.py")
+modelBuildId = createModelBuildResponse.id
+
+client = cmlapi.default_client()
+while True:
+    try:
+        # Query model deployment status
+        api_response = client.list_model_builds(
+            project_id, modelCreationId,
+        )
+        print("\nModel Build Status: ")
+        pprint(api_response.model_builds[0].status)
+
+        # If build is complete, break out
+        if api_response.model_builds[0].status.lower() == desired_status.lower():
+            print("Model build has reached 'built' state.")
+
+        # Wait before polling again
+
+    except Exception as e:
+        print(f"Exception when calling CMLServiceApi->list_model_deployments: {e}")
+
+
+
+createModelDeploymentResponse = deployment.createModelDeployment(modelBuildId, project_id, modelCreationId)
+api_response = client.list_model_deployments(
+                    project_id,
+                    modelCreationId,
+                    modelBuildId
+                )
+pprint(api_response)

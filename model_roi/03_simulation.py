@@ -79,7 +79,6 @@ df = df.drop('fraud_trx', axis=1)
 df = df.astype(str)
 df = df.sample(n=1000)
 
-
 # You can access all models with API V2
 client = cmlapi.default_client()
 project_id = os.environ["CDSW_PROJECT_ID"]
@@ -88,7 +87,10 @@ client.list_models(project_id)
 # You can use an APIV2-based utility to access the latest model's metadata. For more, explore the src folder
 apiUtil = ApiUtility()
 
-modelName = "Model-CLF"
+modelName = os.environ["x"]
+print(modelName)
+print(type(modelName))
+print(apiUtil.get_latest_deployment_details(model_name=modelName))
 
 Model_AccessKey = apiUtil.get_latest_deployment_details(model_name=modelName)["model_access_key"]
 Deployment_CRN = apiUtil.get_latest_deployment_details(model_name=modelName)["latest_deployment_crn"]

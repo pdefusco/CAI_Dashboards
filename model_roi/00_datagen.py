@@ -67,6 +67,14 @@ class DataGen:
         Method to create credit card transactions in Spark Df
         """
 
+        # Check for environment variable 'x'
+        x_env = os.environ.get("x")
+        try:
+            x_factor = float(x_env) if x_env is not None else 1.0
+        except ValueError:
+            print(f"⚠Environment variable x='{x_env}' is not a number. Defaulting to 1.")
+            x_factor = 1.0
+
         # setup use of Faker
         FakerTextUS = FakerTextFactory(locale=['en_US'], providers=[bank])
 
@@ -94,7 +102,7 @@ class DataGen:
         df = df.withColumn("fraud_trx", df["fraud_trx"].cast(IntegerType()))
         df = df.withColumn(
             "customer_score",
-            F.when(rand() < 0.20, rand())  # 20% of the time, just random noise
+            F.when(rand() < 0.20 * x_factor, rand())  # 20% of the time, just random noise
             .otherwise(F.col("fraud_trx") * F.col("age") * F.col("mortgage_balance"))
         )
         df = df.withColumn("customer_score", F.col("customer_score").cast(FloatType()))
