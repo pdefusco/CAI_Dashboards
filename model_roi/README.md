@@ -201,3 +201,21 @@ metrics_flat_df = pd.DataFrame(records)
 In this tutorial, we demonstrated how to leverage the Cloudera AI SDK in order to build a Model ROI Observability Dashboard. While this was a basic example, the same approach could be taken to track more models, with more predictions, across one more multiple use cases, and in the context of more advanced MLOps pipelines where decisions are taken as a result of different ROI results.  
 
 This end-to-end workflow highlights how Cloudera AI simplifies the process of operationalizing Model Observability Dashboards.
+
+### Links to Relevant Blogs and Articles
+
+* [Deploy and Scale AI Applications With Cloudera AI Inference Service](https://www.cloudera.com/blog/business/deploy-and-scale-ai-applications-with-cloudera-ai-inference-service.html) – October 8 2024. Describes how Cloudera’s AI Inference service enables production‑grade deployment of AI applications and scalable model serving. ([Cloudera][1])
+* [Introducing Cloudera’s AI Assistants](https://www.cloudera.com/blog/business/introducing-clouderas-ai-assistants.html) – June 24 2024. Discusses AI‑applications built into Cloudera, including ML copilots and data/BI assistants. ([Cloudera][2])
+* [Introducing MLOps And SDX for Models in Cloudera Machine Learning](https://www.cloudera.com/blog/technical/introducing-mlops-and-sdx-for-models-in-cloudera-machine-learning.html) – Foundational article covering model metrics store, SDK, tracking for models in CML. ([Cloudera][3])
+* [Announcing General Availability of Model Registry](https://www.cloudera.com/blog/technical/announcing-general-availability-of-model-registry.html) – Nov 29 2023. Talks about Cloudera’s Model Registry, versioning, SDK (MLflow), model metadata and lifecycle. ([Cloudera][4])
+* [Enabling Model Metrics (Cloudera Documentation)](https://docs.cloudera.com/machine-learning/1.5.5/model-metrics/topics/ml-enabling-model-metrics.html) – Documentation on how to enable the metrics store in Cloudera AI, track predictions & metrics over time. ([Cloudera Documentation][5])
+* [Model Registry API & SDK Documentation](https://docs.cloudera.com/machine-learning/cloud/rest-api-reference-ai-registry/index.html) – Reference for model registry REST API and Python/SDK usage. ([Cloudera Documentation][6])
+* [Cloudera AI Overview – Applications & Workbenches](https://docs.cloudera.com/machine-learning/cloud/product/topics/ml-product-overview.html) – Describes Cloudera AI Workbench, analytical applications, how models and apps are integrated. ([Cloudera Documentation][7])
+
+[1]: https://www.cloudera.com/blog/business/deploy-and-scale-ai-applications-with-cloudera-ai-inference-service.html?utm_source=chatgpt.com "Deploy and Scale AI Applications With Cloudera AI Inference Service | Blog | Cloudera"
+[2]: https://www.cloudera.com/blog/business/introducing-clouderas-ai-assistants.html?utm_source=chatgpt.com "Introducing Cloudera's AI Assistants | Blog | Cloudera"
+[3]: https://www.cloudera.com/blog/technical/introducing-mlops-and-sdx-for-models-in-cloudera-machine-learning.html?utm_source=chatgpt.com "Introducing MLOps And SDX for Models in Cloudera Machine Learning"
+[4]: https://www.cloudera.com/blog/technical/announcing-general-availability-of-model-registry.html?utm_source=chatgpt.com "Announcing General Availability of Model Registry | Blog | Cloudera"
+[5]: https://docs.cloudera.com/machine-learning/1.5.5/model-metrics/topics/ml-enabling-model-metrics.html?utm_source=chatgpt.com "Enabling model metrics"
+[6]: https://docs.cloudera.com/machine-learning/cloud/rest-api-reference-ai-registry/index.html?utm_source=chatgpt.com "Model Registry"
+[7]: https://docs.cloudera.com/machine-learning/cloud/product/topics/ml-product-overview.html?utm_source=chatgpt.com "Cloudera AI overview"
