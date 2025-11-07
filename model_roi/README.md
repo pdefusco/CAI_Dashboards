@@ -56,6 +56,14 @@ Now increase the Threshold to nearly the max. Most models are now in the positiv
 
 ![alt text](../img/step_8.png)
 
+To better understand each model's decisions, select a model in the Table at the center of the screen and observe that the Confusion Matrix is updated. The Confusion Matrix shows how each model places events in each of the four categories. Again, try changing the Decision Threshold and observe that the counts in each of the four categories are updated.
+
+![alt text](../img/step_9.png)
+
+![alt text](../img/step_10.png)
+
+![alt text](../img/step_11.png)
+
 ## Requirements
 
 This example was built with Cloudera Public Cloud 7.3.1 and CAI Workbench 2.0.53. The same example will also work in Private Cloud without any changes. You can reproduce this tutorial in your CAI environment with the PBJ Editor Python 3.10 Cloudera AI Runtime.
