@@ -88,7 +88,7 @@ Runtimes:
   PBJ	Python 3.10	Standard 2025.09.01
 ```
 
-#### 2. Create the Project Environment Variables
+#### 2. Create Project Environment Variables
 
 Navigate to User Settings -> Environment Variables and then save the following Environment Variables:
 
@@ -116,7 +116,7 @@ pip3 install -r requirements.txt
 
 ![alt text](../img/install-requirements.png)
 
-#### 4. Create and Run the MLOps Pipeline Job
+#### 4. Create and Run MLOps Pipeline Job
 
 Create the MLOps Pipeline Job. The job will automatically create and run all the jobs and model deployments needed in order to prefill the backend infrastructure with ten models and 1000 synthetic requests to each model. The Pipeline will finally also deploy the Dashboard for you.
 
@@ -132,9 +132,11 @@ Run the job. The job will run for approximately 30 minutes. When it is done, you
 
 ![alt text](../img/dashboards_overview.png)
 
+Navigate to the Applications landing page and notice the Application with the dashboard has been deployed. Open it to use the dashboard.
+
 #### 5. Explore the Dashboard
 
-Use the "Understanding the Dashboard" section above to simulate and compare different financial ROI scenarios.
+Go to the "Understanding the Dashboard" section above to simulate and compare different financial ROI scenarios.
 
 If you want to familiarize yourself with the Python SDK, open the scripts and notice the following highlights:
 
