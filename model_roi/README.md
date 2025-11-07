@@ -24,11 +24,15 @@ False positives are predictions that incorrectly classified an event as taking p
 
 False negatives are predictions that incorrectly classified an event as not taking place when it in fact did, such as when a loan applicant was predicted not to be likely to default and was therefore approved for a loan, when in fact the applicant did default on the loan.
 
-In both cases False Positives and Negatives are mistakes and lead to either a real loss or an opportunity cost. Generally, there is a trade off between False Negatives and False Positives. This trade off can be increased or decreased via the decision threshold. Lowering the threshold makes the model more aggressive, predicting more positives, which may capture more true positives but also increases false positives. Viceversa, increasing the threshold leads to more negative predictions, which will likely capture more true negatives but also incur in more false negatives.
+In both cases False Positives and Negatives are erroneous predictions and lead to either a real financial loss or an opportunity cost. Generally, there is a trade off between False Negatives and False Positives. The decision threshold is typically set at .5 (50%) by default. It means that any event predicted to be above the 50% in probability to occur is classified as positive (Category 1) and any event predicted to have a probability less than 50% is classified as negative (Category 0).
 
-Each business scenario is different, and at times it might be ok for an enterprise to have many False Positives and fewer False Negatives, as long as the False Positives don't incur in a high penalty. In other situations, it might be more preferable to have few False Positives in exchange for more False Negatives.
+However, you can modify the decision threshold as you wish. Lowering the threshold (e.g. 20%) makes the model more aggressive, predicting more positives, which may capture more true positives but also increases false positives. Viceversa, increasing the threshold (e.g. 80%) leads to more negative predictions, which will likely capture more true negatives but also incur in more false negatives.
 
-In this scenario we price in a financial penalty for False Positives, and a financial benefit for True Positives and True Negatives. In addition, we also price in a fixed cost of running the models.
+This is why typically predictive models in the discriminative AI paradigm will either have relatively more false positives to false negatives, or relatively more false negatives to false positives, proportionally. There is a tradeoff.
+
+So how do you decide how to set the decision threshold? Each business scenario is different, and at times it might be ok for an enterprise to have many False Positives and fewer False Negatives, as long as the False Positives don't incur in a high penalty. In other situations, it might be more preferable to have fewer False Positives in exchange for relatively more False Negatives.
+
+In this scenario we arbitrarily price in a financial penalty for False Positives, and a financial benefit for True Positives and True Negatives. Therefore, the ideal decision threshold for each model varies as a function of these four values, according to your business use case. For example, a high False Positive penalty will probably incentivize you to keep the False Positive count low by decreasing the decision threshold. In addition, we also price in a fixed cost of running the models.
 
 Start with the default values in each of the four fields and explore the Dashboard. Navigate to the lower end of the dashboard and notice the comparison between each model's revenue. It looks like BEWNX is going to bring in the most revenue.  
 
